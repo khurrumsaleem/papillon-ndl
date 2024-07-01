@@ -61,6 +61,11 @@ class Tabulated1D : public Function1D {
   Tabulated1D(Interpolation interp, const std::vector<double>& x,
               const std::vector<double>& y);
 
+  Tabulated1D(const Tabulated1D& other);
+  Tabulated1D& operator=(const Tabulated1D& other);
+  Tabulated1D(Tabulated1D&&) = default;
+  Tabulated1D& operator=(Tabulated1D&&) = default;
+
   ~Tabulated1D() = default;
 
   double operator()(double x) const override final {
@@ -272,6 +277,8 @@ class Tabulated1D : public Function1D {
   std::vector<double> x_;
   std::vector<double> y_;
   std::vector<InterpolationRange> regions_;
+
+  void make_regions();
 };
 
 }  // namespace pndl

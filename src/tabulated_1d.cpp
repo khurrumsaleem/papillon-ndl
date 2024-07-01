@@ -54,33 +54,7 @@ Tabulated1D::Tabulated1D(const std::vector<uint32_t>& NBT,
   }
 
   // Make 1D regions of all intervals
-  std::size_t low = 0;
-  std::size_t hi = 0;
-  for (std::size_t i = 0; i < breakpoints_.size(); i++) {
-    hi = breakpoints_[i];
-
-    try {
-      regions_.push_back(
-          InterpolationRange(interpolation_[i],
-                             {x_.begin() + static_cast<std::ptrdiff_t>(low),
-                              x_.begin() + static_cast<std::ptrdiff_t>(hi)},
-                             {y_.begin() + static_cast<std::ptrdiff_t>(low),
-                              y_.begin() + static_cast<std::ptrdiff_t>(hi)}));
-    } catch (PNDLException& error) {
-      std::string mssg = "The i = " + std::to_string(i) +
-                         " InterpolationRange could not be constructed when "
-                         "building Tabulated1D.";
-      error.add_to_exception(mssg);
-      throw error;
-    }
-
-    low = hi - 1;
-
-    // Check for discontinuity at region boundary
-    if (low < x.size() - 1) {
-      if (x[low] == x[low + 1]) low++;
-    }
-  }
+  make_regions();
 }
 
 Tabulated1D::Tabulated1D(Interpolation interp, const std::vector<double>& x,
@@ -102,19 +76,26 @@ Tabulated1D::Tabulated1D(Interpolation interp, const std::vector<double>& x,
   }
 
   // Make 1 1D region
-  const std::size_t hi = breakpoints_[0];
-  try {
-    regions_.push_back(InterpolationRange(
-        interpolation_[0],
-        {x_.begin(), x_.begin() + static_cast<std::ptrdiff_t>(hi)},
-        {y_.begin(), y_.begin() + static_cast<std::ptrdiff_t>(hi)}));
-  } catch (PNDLException& error) {
-    std::string mssg =
-        "The InterpolationRange could not be constructed when building "
-        "Tabulated1D.";
-    error.add_to_exception(mssg);
-    throw error;
-  }
+  make_regions();
+}
+
+Tabulated1D::Tabulated1D(const Tabulated1D& other)
+    : breakpoints_(other.breakpoints_),
+      interpolation_(other.interpolation_),
+      x_(other.x_),
+      y_(other.y_),
+      regions_() {
+  make_regions();
+}
+
+Tabulated1D& Tabulated1D::operator=(const Tabulated1D& other) {
+  this->breakpoints_ = other.breakpoints_;
+  this->interpolation_ = other.interpolation_;
+  this->x_ = other.x_;
+  this->y_ = other.y_;
+  this->regions_.clear();
+  make_regions();
+  return *this;
 }
 
 void Tabulated1D::linearize(double tolerance) {
@@ -161,6 +142,36 @@ Tabulated1D::InterpolationRange::InterpolationRange(Interpolation interp,
 
   interpolator_.verify_x_grid(x_.begin(), x_.end());
   interpolator_.verify_y_grid(y_.begin(), y_.end());
+}
+
+void Tabulated1D::make_regions() {
+  std::size_t low = 0;
+  std::size_t hi = 0;
+  for (std::size_t i = 0; i < breakpoints_.size(); i++) {
+    hi = breakpoints_[i];
+
+    try {
+      regions_.push_back(
+          InterpolationRange(interpolation_[i],
+                             {x_.begin() + static_cast<std::ptrdiff_t>(low),
+                              x_.begin() + static_cast<std::ptrdiff_t>(hi)},
+                             {y_.begin() + static_cast<std::ptrdiff_t>(low),
+                              y_.begin() + static_cast<std::ptrdiff_t>(hi)}));
+    } catch (PNDLException& error) {
+      std::string mssg = "The i = " + std::to_string(i) +
+                         " InterpolationRange could not be constructed when "
+                         "building Tabulated1D.";
+      error.add_to_exception(mssg);
+      throw error;
+    }
+
+    low = hi - 1;
+
+    // Check for discontinuity at region boundary
+    if (low < x_.size() - 1) {
+      if (x_[low] == x_[low + 1]) low++;
+    }
+  }
 }
 
 }  // namespace pndl
