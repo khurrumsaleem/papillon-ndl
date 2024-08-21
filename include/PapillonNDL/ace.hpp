@@ -31,6 +31,8 @@
 #include <PapillonNDL/zaid.hpp>
 #include <array>
 #include <fstream>
+#include <istream>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -55,6 +57,13 @@ class ACE {
    * @param type Format of ACE file. Default is ASCII.
    */
   ACE(std::string fname, Type type = Type::ASCII);
+
+  /**
+   * @param data Input stream providing data.
+   * @param type Format of the data.
+   */
+  ACE(std::istream& data, Type type);
+
   ~ACE() = default;
 
   /**
@@ -216,7 +225,13 @@ class ACE {
    * @brief Saves a copy of the ACE file in the type 2 binary format.
    * @param fname Name of file where binary data will be saved.
    */
-  void save_binary(std::string& fname);
+  void save_binary(const std::string& fname) const;
+
+  /**
+   * @brief Writes the ACE file in the type 2 binary format to a stream.
+   * @param data Output stream to where data is written.
+   */
+  void save_binary(std::ostream& data) const;
 
   /**
    * @brief Returns a pointer to the beginning of the XSS array.
@@ -325,8 +340,8 @@ class ACE {
   std::vector<double> xss_;
 
   // Private Helper Methods
-  void read_ascii(std::ifstream& file);
-  void read_binary(std::ifstream& file);
+  void read_ascii(std::istream& file);
+  void read_binary(std::istream& file);
 };  // ACE
 }  // namespace pndl
 

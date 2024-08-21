@@ -72,7 +72,32 @@ ACE::ACE(std::string fname, Type type)
   file.close();
 }
 
-void ACE::read_ascii(std::ifstream& file) {
+ACE::ACE(std::istream& data, Type type)
+    : zaid_(0, 0),
+      temperature_(),
+      awr_(),
+      fissile_(),
+      fname_(),
+      zaid_txt(10, ' '),
+      date_(10, ' '),
+      comment_(70, ' '),
+      mat_(10, ' '),
+      izaw_(),
+      nxs_(),
+      jxs_(),
+      xss_() {
+  switch (type) {
+    case Type::ASCII:
+      read_ascii(data);
+      break;
+
+    case Type::BINARY:
+      read_binary(data);
+      break;
+  }
+}
+
+void ACE::read_ascii(std::istream& file) {
   // Check first line to determine header type
   bool legacy_header = true;
 
@@ -186,7 +211,7 @@ void ACE::read_ascii(std::ifstream& file) {
   if (jxs_[1] > 0) fissile_ = true;
 }
 
-void ACE::read_binary(std::ifstream& file) {
+void ACE::read_binary(std::istream& file) {
   // Skip first record length
   file.ignore(4);
 
@@ -255,47 +280,51 @@ void ACE::read_binary(std::ifstream& file) {
   if (jxs_[1] > 0) fissile_ = true;
 }
 
-void ACE::save_binary(std::string& fname) {
+void ACE::save_binary(const std::string& fname) const {
   std::ofstream file(fname, std::ios_base::binary);
+  this->save_binary(file);
+  file.close();
+}
 
+void ACE::save_binary(std::ostream& data) const {
   // Write first record length which is size of all
   // of the ACE header
   uint32_t rlen = 100 + 64 * sizeof(int32_t) + 18 * sizeof(double);
-  file.write(reinterpret_cast<char*>(&rlen), 4);
+  data.write(reinterpret_cast<char*>(&rlen), 4);
 
   // Write zaid
-  file.write(zaid_txt.data(), 10);
+  data.write(zaid_txt.data(), 10);
 
   // Write the AWR
-  file.write(reinterpret_cast<char*>(&awr_), sizeof(double));
+  data.write(reinterpret_cast<const char*>(&awr_), sizeof(double));
 
   // Write the temperatuer
-  temperature_ /= MEV_TO_EV * EV_TO_K;
-  file.write(reinterpret_cast<char*>(&temperature_), sizeof(double));
+  const double mev_temp = temperature_ / (MEV_TO_EV * EV_TO_K);
+  data.write(reinterpret_cast<const char*>(&mev_temp), sizeof(double));
 
   // Write date, comment, and mat
-  file.write(date_.data(), 10);
-  file.write(comment_.data(), 70);
-  file.write(mat_.data(), 10);
+  data.write(date_.data(), 10);
+  data.write(comment_.data(), 70);
+  data.write(mat_.data(), 10);
 
   // Write IZAW
   for (std::size_t i = 0; i < 16; i++) {
-    file.write(reinterpret_cast<char*>(&izaw_[i].first), sizeof(int32_t));
-    file.write(reinterpret_cast<char*>(&izaw_[i].second), sizeof(double));
+    data.write(reinterpret_cast<const char*>(&izaw_[i].first), sizeof(int32_t));
+    data.write(reinterpret_cast<const char*>(&izaw_[i].second), sizeof(double));
   }
 
   // Write NXS
   for (std::size_t i = 0; i < 16; i++) {
-    file.write(reinterpret_cast<char*>(&nxs_[i]), sizeof(int32_t));
+    data.write(reinterpret_cast<const char*>(&nxs_[i]), sizeof(int32_t));
   }
 
   // Write JXS
   for (std::size_t i = 0; i < 32; i++) {
-    file.write(reinterpret_cast<char*>(&jxs_[i]), sizeof(int32_t));
+    data.write(reinterpret_cast<const char*>(&jxs_[i]), sizeof(int32_t));
   }
 
   // Write end record length
-  file.write(reinterpret_cast<char*>(&rlen), 4);
+  data.write(reinterpret_cast<const char*>(&rlen), 4);
 
   // Write XSS
   const uint32_t ner = 512;
@@ -309,19 +338,17 @@ void ACE::save_binary(std::string& fname) {
     rlen = static_cast<uint32_t>(n * sizeof(double));
 
     // Write first len header
-    file.write(reinterpret_cast<char*>(&rlen), 4);
+    data.write(reinterpret_cast<char*>(&rlen), 4);
 
     for (std::size_t j = ll; j < ll + n; j++) {
-      file.write(reinterpret_cast<char*>(&xss_[j]), sizeof(double));
+      data.write(reinterpret_cast<const char*>(&xss_[j]), sizeof(double));
     }
     ll += n;
     nn -= n;
 
     // Write second len header
-    file.write(reinterpret_cast<char*>(&rlen), 4);
+    data.write(reinterpret_cast<const char*>(&rlen), 4);
   }
-
-  file.close();
 }
 
 std::vector<std::pair<int32_t, double>> ACE::izaw(std::size_t i,

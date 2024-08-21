@@ -58,7 +58,8 @@ void init_ACE(py::module& m) {
       .def("comment", &ACE::comment)
       .def("mat", &ACE::mat)
       .def("date", &ACE::date)
-      .def("save_binary", &ACE::save_binary)
+      .def("save_binary",
+           py::overload_cast<const std::string&>(&ACE::save_binary, py::const_))
       .def("ESZ", &ACE::ESZ)
       .def("NU", &ACE::NU)
       .def("MTR", &ACE::MTR)
